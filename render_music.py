@@ -14,7 +14,24 @@ C4-1.0 D4-1.0 E4-1.0 C4-1.0 D4-1.0 E4-1.0 D4-1.0 D4-1.0 C4-1.0 D4-1.0 E4-1.0 D4-
 
 # Piano frequency map (MIDI note numbers)
 note_to_midi = {
-    'C4': 60, 'D4': 62, 'E4': 64, 'G4': 67
+    # Octave 3
+    'A3': 57, 'Bb3': 58, 'B3': 59,
+    
+    # Octave 4 (most common octave in your dataset)
+    'C4': 60, 'C#4': 61, 'Db4': 61,
+    'D4': 62, 'D#4': 63, 'Eb4': 63,
+    'E4': 64, 'F4': 65, 'F#4': 66, 'Gb4': 66,
+    'G4': 67, 'G#4': 68, 'Ab4': 68,
+    'A4': 69, 'A#4': 70, 'Bb4': 70,
+    'B4': 71,
+    
+    # Octave 5
+    'C5': 72, 'C#5': 73, 'Db5': 73,
+    'D5': 74, 'D#5': 75, 'Eb5': 75,
+    'E5': 76, 'F5': 77, 'F#5': 78, 'Gb5': 78,
+    'G5': 79, 'G#5': 80, 'Ab5': 80,
+    'A5': 81, 'A#5': 82, 'Bb5': 82,
+    'B5': 83
 }
 
 def piano_sound(freq, duration, volume=0.5):

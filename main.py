@@ -72,6 +72,68 @@ Begin the story:"""
     return gemini_generate(prompt)
 
 
+from unsloth import FastLanguageModel
+from unsloth.chat_templates import get_chat_template
+import torch
+
+def setup_finetuned_music_model():
+    """Set up the fine-tuned Unsloth model for music prompt generation"""
+    # Load the saved fine-tuned model
+    model, tokenizer = FastLanguageModel.from_pretrained(
+        "E:\6sem\GenAI\HandsOn\unit4\lora_model",  # Path to your saved model from the notebook
+        max_seq_length=2048,
+        load_in_4bit=True
+    )
+    
+    # Set up chat template
+    tokenizer = get_chat_template(
+        tokenizer,
+        chat_template="llama-3.1"
+    )
+    
+    # Enable faster inference
+    FastLanguageModel.for_inference(model)
+    return model, tokenizer
+
+def generate_music_prompt_finetuned(query, model, tokenizer):
+    """Generate music prompt using fine-tuned model"""
+    messages = [{
+        "role": "user",
+        "content": f"""Based on the theme: {query}
+        Generate a detailed music description including:
+        - Musical genre and style
+        - Primary instruments and their roles
+        - Tempo and rhythm characteristics
+        - Emotional atmosphere and mood
+        - Sound design elements and effects
+        Make it suitable for nostalgic game music."""
+    }]
+    
+    # Prepare input
+    inputs = tokenizer.apply_chat_template(
+        messages,
+        tokenize=True,
+        add_generation_prompt=True,
+        return_tensors="pt"
+    )
+    
+    if torch.cuda.is_available():
+        inputs = inputs.to("cuda")
+    
+    # Generate with tuned parameters
+    outputs = model.generate(
+        input_ids=inputs,
+        max_new_tokens=128,
+        temperature=1.5,
+        min_p=0.1,
+        use_cache=True
+    )
+    
+    # Process output
+    generated_text = tokenizer.batch_decode(outputs)[0]
+    response = generated_text.split("assistant")[1].strip()
+    return f"A musical piece that captures: {response}"
+
 
 
 def generate_music_prompt(query):

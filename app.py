@@ -210,71 +210,79 @@ def render_piano_sequence(melody, sample_rate=SAMPLE_RATE):
     
     return (audio * 32767).astype(np.int16)
 
-# Add this to app.py and render_music.py
-# def create_note_to_midi_mapping():
-#     """Create a complete mapping of notes to MIDI numbers"""
-#     notes = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
-#     note_to_midi = {}
-    
-#     for octave in range(2, 6):  # Cover octaves 2-5
-#         for i, note in enumerate(notes):
-#             note_name = f"{note}{octave}"
-#             midi_number = 12 * (octave + 1) + i
-#             note_to_midi[note_name] = midi_number
-            
-#             # Add enharmonic equivalents
-#             if 'b' in note:
-#                 sharp_name = f"{notes[(i-1)%12].replace('b','#')}{octave}"
-#                 note_to_midi[sharp_name] = midi_number
-    
-#     return note_to_midi
-
-# Replace the existing create_note_to_midi_mapping() function with:
 
 def create_note_to_midi_mapping():
-    """Create a mapping of notes to MIDI numbers"""
+    """Create a mapping of notes (including sharps and flats) to MIDI numbers for octaves 2-6."""
     base_notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+    sharp_to_flat = {
+        'C#': 'Db',
+        'D#': 'Eb',
+        'F#': 'Gb',
+        'G#': 'Ab',
+        'A#': 'Bb'
+    }
     note_to_midi = {}
-    
-    for octave in range(2, 6):  # Octaves 2-5
+    for octave in range(2, 7):  # Covers octaves 2-6
         for i, note in enumerate(base_notes):
             note_name = f"{note}{octave}"
             midi_number = (12 * (octave + 1)) + i
             note_to_midi[note_name] = midi_number
-            
-            # Add flat equivalents
-            if '#' in note:
-                flat_name = f"{chr(ord(note[0]) + 1)}b{octave}"
+            # Add flat equivalents for sharps
+            if note in sharp_to_flat:
+                flat_name = f"{sharp_to_flat[note]}{octave}"
                 note_to_midi[flat_name] = midi_number
-    
     return note_to_midi
 
+
+# def create_note_to_midi_mapping():
+#     """Create a mapping of notes to MIDI numbers"""
+#     base_notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+#     note_to_midi = {}
+    
+#     for octave in range(2, 6):  # Octaves 2-5
+#         for i, note in enumerate(base_notes):
+#             note_name = f"{note}{octave}"
+#             midi_number = (12 * (octave + 1)) + i
+#             note_to_midi[note_name] = midi_number
+            
+#             # Add flat equivalents
+#             if '#' in note:
+#                 flat_name = f"{chr(ord(note[0]) + 1)}b{octave}"
+#                 note_to_midi[flat_name] = midi_number
+    
+#     return note_to_midi
+
+
+
 # def render_piano_sequence(melody, sample_rate=SAMPLE_RATE):
-#     """Convert melody sequence to piano audio"""
+#     """Convert melody sequence to piano audio with fixed length samples"""
 #     audio = np.array([], dtype=np.float32)
 #     note_to_midi = create_note_to_midi_mapping()
+#     base_length = int(SAMPLE_RATE * BEAT_DURATION)  # Use this as standard length unit
     
 #     for note_str in melody.strip().split():
 #         try:
 #             note, duration = note_str.split('-')
-#             duration = float(duration) * BEAT_DURATION
+#             duration = float(duration)
             
 #             if note in note_to_midi:
 #                 freq = 440 * 2 ** ((note_to_midi[note] - 69) / 12)
-#                 note_audio = piano_sound(freq, duration)
                 
-#                 # Ensure consistent array lengths
-#                 desired_length = int(duration * sample_rate)
-#                 if len(note_audio) < desired_length:
-#                     note_audio = np.pad(note_audio, (0, desired_length - len(note_audio)))
-#                 elif len(note_audio) > desired_length:
-#                     note_audio = note_audio[:desired_length]
+#                 # Calculate exact number of samples needed
+#                 desired_samples = int(duration * base_length)
                 
-#                 # First note
+#                 # Generate note with exact length
+#                 t = np.linspace(0, duration * BEAT_DURATION, desired_samples)
+#                 note_audio = 0.5 * np.sin(2 * np.pi * freq * t)
+                
+#                 # Apply envelope
+#                 envelope = np.exp(-3 * t / (duration * BEAT_DURATION))
+#                 note_audio = note_audio * envelope
+                
+#                 # Concatenate with existing audio
 #                 if len(audio) == 0:
 #                     audio = note_audio
 #                 else:
-#                     # Concatenate with proper padding
 #                     audio = np.concatenate([audio, note_audio])
 #             else:
 #                 st.warning(f"Skipping unknown note: {note}")
@@ -283,344 +291,97 @@ def create_note_to_midi_mapping():
 #             st.warning(f"Error processing note {note_str}: {str(e)}")
 #             continue
     
-#     return (audio * 32767).astype(np.int16)
+#     if len(audio) > 0:
+#         # Normalize and convert to 16-bit PCM
+#         audio = audio / np.max(np.abs(audio))
+#         return (audio * 32767).astype(np.int16)
+#     else:
+#         return np.zeros(1000, dtype=np.int16)  # Return silence if no notes were processed
+
+# def render_piano_sequence(melody, sample_rate=SAMPLE_RATE):
+#     """Convert melody sequence to piano audio with fixed length samples"""
+#     audio = np.array([], dtype=np.float32)
+#     note_to_midi = create_note_to_midi_mapping()
+#     base_length = int(SAMPLE_RATE * BEAT_DURATION)  # Use this as standard length unit
+
+#     for note_str in melody.strip().split():
+#         try:
+#             note, duration = note_str.split('-')
+#             duration = float(duration)
+
+#             if note in note_to_midi:
+#                 freq = 440 * 2 ** ((note_to_midi[note] - 69) / 12)
+
+#                 # Calculate exact number of samples needed
+#                 desired_samples = int(duration * base_length)
+
+#                 # Generate note with exact length
+#                 t = np.linspace(0, duration * BEAT_DURATION, desired_samples)
+#                 note_audio = 0.5 * np.sin(2 * np.pi * freq * t)
+
+#                 # Apply envelope
+#                 envelope = np.exp(-3 * t / (duration * BEAT_DURATION))
+#                 note_audio = note_audio * envelope
+
+#                 # Concatenate with existing audio
+#                 if len(audio) == 0:
+#                     audio = note_audio
+#                 else:
+#                     audio = np.concatenate([audio, note_audio])
+#             else:
+#                 st.warning(f"Skipping unknown note: {note}")
+
+#         except (ValueError, KeyError) as e:
+#             st.warning(f"Error processing note {note_str}: {str(e)}")
+#             continue
+
+#     if len(audio) > 0:
+#         # Normalize and convert to 16-bit PCM
+#         audio = audio / np.max(np.abs(audio))
+#         return (audio * 32767).astype(np.int16)
+#     else:
+#         return np.zeros(1000, dtype=np.int16)  # Return silence if no notes were processed
 
 def render_piano_sequence(melody, sample_rate=SAMPLE_RATE):
-    """Convert melody sequence to piano audio with fixed length samples"""
+    """Convert melody sequence to piano audio with fixed length samples, supporting all notes in dataset."""
+    import numpy as np
     audio = np.array([], dtype=np.float32)
     note_to_midi = create_note_to_midi_mapping()
-    base_length = int(SAMPLE_RATE * BEAT_DURATION)  # Use this as standard length unit
-    
-    for note_str in melody.strip().split():
+    base_length = int(sample_rate * BEAT_DURATION)
+    # Support both comma and space separated notes
+    for note_str in melody.replace(',', ' ').split():
+        note_str = note_str.strip()
+        if not note_str:
+            continue
         try:
             note, duration = note_str.split('-')
             duration = float(duration)
-            
             if note in note_to_midi:
                 freq = 440 * 2 ** ((note_to_midi[note] - 69) / 12)
-                
-                # Calculate exact number of samples needed
                 desired_samples = int(duration * base_length)
-                
-                # Generate note with exact length
                 t = np.linspace(0, duration * BEAT_DURATION, desired_samples)
                 note_audio = 0.5 * np.sin(2 * np.pi * freq * t)
-                
-                # Apply envelope
                 envelope = np.exp(-3 * t / (duration * BEAT_DURATION))
                 note_audio = note_audio * envelope
-                
-                # Concatenate with existing audio
                 if len(audio) == 0:
                     audio = note_audio
                 else:
                     audio = np.concatenate([audio, note_audio])
             else:
                 st.warning(f"Skipping unknown note: {note}")
-                
         except (ValueError, KeyError) as e:
             st.warning(f"Error processing note {note_str}: {str(e)}")
             continue
-    
     if len(audio) > 0:
-        # Normalize and convert to 16-bit PCM
         audio = audio / np.max(np.abs(audio))
         return (audio * 32767).astype(np.int16)
     else:
-        return np.zeros(1000, dtype=np.int16)  # Return silence if no notes were processed
+        return np.zeros(1000, dtype=np.int16)
 
-
-# def main():
-#     # Header
-#     st.title("🎵 AI Story & Music Generator 🎨")
-#     st.markdown("### Transform your ideas into stories and melodies")
-    
-#     bm25, stories = setup_retrieval()
-    
-#     # Sidebar
-#     with st.sidebar:
-#         st.image("https://via.placeholder.com/150?text=Music+AI", caption="AI Composer")
-#         st.markdown("### About")
-#         st.write("""
-#         This app uses AI to create unique stories and matching music.
-#         1. Enter your theme
-#         2. Get a custom story
-#         3. Listen to AI-generated music
-#         """)
-        
-#         if bm25 and stories:
-#             st.success("✅ Story retrieval system loaded")
-#         else:
-#             st.warning("⚠️ Running without story retrieval")
-        
-#     # Main content
-#     col1, col2 = st.columns([2, 1])
-    
-#     with col1:
-#         query = st.text_input(
-#             "Enter your theme:",
-#             placeholder="Example: A magical forest adventure",
-#             help="Try to be specific about the mood and setting you want"
-#         )
-    
-#     # with col2:
-#     #     if st.button("🚀 Generate Story & Music", use_container_width=True):
-#     #         st.session_state.generation_complete = False
-            
-#     #         # Progress tracking
-#     #         progress_bar = st.progress(0)
-#     #         status_text = st.empty()
-            
-#     #         # Story Generation
-#     #         status_text.text("📝 Generating story...")
-#     #         progress_bar.progress(25)
-#     #         story = generate_story(query)
-            
-#     #         # Display story with animation
-#     #         st.markdown("### 📖 Your Story")
-#     #         story_container = st.empty()
-#     #         for i in range(len(story)):
-#     #             story_container.markdown(f">{story[:i+1]}_")
-#     #             time.sleep(0.01)
-#     #         story_container.markdown(f">{story}")
-#     # with col2:
-#     #     if st.button("🚀 Generate Story & Music", use_container_width=True):
-#     #         st.session_state.generation_complete = False
-            
-#     #         # Progress tracking
-#     #         progress_bar = st.progress(0)
-#     #         status_text = st.empty()
-            
-#     #         # Story Generation with BM25
-#     #         status_text.text("📝 Generating story...")
-#     #         progress_bar.progress(25)
-            
-#     #         # Show similar stories if available
-#     #         if bm25 and stories:
-#     #             similar = retrieve_similar_stories(query, bm25, stories)
-#     #             with st.expander("📚 Similar Stories Found"):
-#     #                 for i, story in enumerate(similar, 1):
-#     #                     st.write(f"{i}. {story[:200]}...")
-            
-#     #         story = generate_story(query, bm25, stories)
-            
-#     #         # Music Prompt Generation
-#     #         status_text.text("🎵 Creating music description...")
-#     #         progress_bar.progress(50)
-#     #         music_prompt = generate_music_prompt(story)
-            
-#     #         st.markdown("### 🎼 Music Description")
-#     #         st.write(music_prompt)
-            
-#     #         # Initial Melody Generation
-#     #         status_text.text("🎹 Composing initial melody...")
-#     #         progress_bar.progress(75)
-            
-#     #         try:
-#     #             melody_generator = setup_melody_generator()
-#     #             start_sequence = ["C4-1.0", "D4-1.0", "E4-1.0", "C4-1.0"]
-#     #             melody = melody_generator.generate(start_sequence)
-                
-#     #             # Generate piano sequence
-#     #             piano_audio = np.array([], dtype=np.float32)
-#     #             note_to_midi = {'C4': 60, 'D4': 62, 'E4': 64, 'G4': 67}
-                
-#     #             for note_str in melody.strip().split():
-#     #                 note, duration = note_str.split('-')
-#     #                 duration = float(duration) * BEAT_DURATION
-#     #                 freq = 440 * 2 ** ((note_to_midi[note] - 69) / 12)
-#     #                 note_audio = piano_sound(freq, duration)
-#     #                 piano_audio = np.concatenate((piano_audio, note_audio))
-                
-#     #             piano_audio = (piano_audio * 32767).astype(np.int16)
-#     #             scipy.io.wavfile.write("piano_sequence.wav", SAMPLE_RATE, piano_audio)
-                
-#     #             st.markdown("### 🎹 Initial Piano Melody")
-#     #             st.audio("piano_sequence.wav")
-                
-#     #             # Final Music Generation
-#     #             status_text.text("🎼 Creating final composition...")
-#     #             progress_bar.progress(90)
-                
-#     #             processor = AutoProcessor.from_pretrained("facebook/musicgen-small")
-#     #             model = MusicgenForConditionalGeneration.from_pretrained("facebook/musicgen-small")
-                
-#     #             if torch.cuda.is_available():
-#     #                 model = model.to("cuda")
-                
-#     #             inputs = processor(
-#     #                 text=[music_prompt],
-#     #                 padding=True,
-#     #                 return_tensors="pt"
-#     #             )
-                
-#     #             if torch.cuda.is_available():
-#     #                 inputs = {k: v.to("cuda") for k, v in inputs.items()}
-                
-#     #             with torch.no_grad():
-#     #                 output = model.generate(**inputs, max_new_tokens=256, do_sample=True)
-                
-#     #             audio_data = output[0].cpu().numpy()
-#     #             audio_data = np.clip(audio_data / np.max(np.abs(audio_data)), -1.0, 1.0)
-#     #             audio_data = (audio_data * 32767).astype(np.int16)
-                
-#     #             scipy.io.wavfile.write("final_music.wav", 32000, audio_data)
-                
-#     #             st.markdown("### 🎵 Final Composition")
-#     #             st.audio("final_music.wav")
-                
-#     #             progress_bar.progress(100)
-#     #             status_text.text("✨ Generation complete!")
-#     #             st.session_state.generation_complete = True
-                
-#     #         except Exception as e:
-#     #             st.error(f"An error occurred: {str(e)}")
-#     #             status_text.text("❌ Generation failed")
-#     #             progress_bar.empty()
-#     with col2:
-#         if st.button("🚀 Generate Story & Music", use_container_width=True):
-#             st.session_state.generation_complete = False
-            
-#             # Progress tracking
-#             progress_bar = st.progress(0)
-#             status_text = st.empty()
-            
-#             # Story Generation
-#             status_text.text("📝 Generating story...")
-#             progress_bar.progress(25)
-            
-#             # Generate story without showing retrieved stories
-#             story = generate_story(query, bm25, stories)
-            
-#             # Display only the generated story with animation
-#             st.markdown("### 📖 Generated Story")
-#             story_container = st.empty()
-#             for i in range(len(story)):
-#                 story_container.markdown(f">{story[:i+1]}_")
-#                 time.sleep(0.01)
-#             story_container.markdown(f">{story}")
-            
-#             # Music Generation using train.py's sequence generation
-#             status_text.text("🎹 Composing melody...")
-#             progress_bar.progress(50)
-            
-#             try:
-#                 # Use the exact setup from train.py
-#                 melody_preprocessor = MelodyPreprocessor(DATA_PATH, batch_size=BATCH_SIZE)
-#                 train_dataset = melody_preprocessor.create_training_dataset()
-#                 vocab_size = melody_preprocessor.number_of_tokens_with_padding
-
-#                 transformer_model = Transformer(
-#                     num_layers=2,
-#                     d_model=64,
-#                     num_heads=2,
-#                     d_feedforward=128,
-#                     input_vocab_size=vocab_size,
-#                     target_vocab_size=vocab_size,
-#                     max_num_positions_in_pe_encoder=MAX_POSITIONS_IN_POSITIONAL_ENCODING,
-#                     max_num_positions_in_pe_decoder=MAX_POSITIONS_IN_POSITIONAL_ENCODING,
-#                     dropout_rate=0.1,
-#                 )
-
-#                 melody_generator = MelodyGenerator(
-#                     transformer_model, 
-#                     melody_preprocessor.tokenizer
-#                 )
-                
-#                 # Use the same start sequence as train.py
-#                 start_sequence = ["C4-1.0", "D4-1.0", "E4-1.0", "C4-1.0"]
-#                 new_melody = melody_generator.generate(start_sequence)
-                
-#                 # Generate piano sequence
-#                 # piano_audio = np.array([], dtype=np.float32)
-#                 # #note_to_midi = {'C4': 60, 'D4': 62, 'E4': 64, 'G4': 67}
-                
-#                 # note_to_midi = create_note_to_midi_mapping()
-                
-#                 # # for note_str in new_melody.strip().split():
-#                 # #     note, duration = note_str.split('-')
-#                 # #     duration = float(duration) * BEAT_DURATION
-#                 # #     freq = 440 * 2 ** ((note_to_midi[note] - 69) / 12)
-#                 # #     note_audio = piano_sound(freq, duration)
-#                 # #     piano_audio = np.concatenate((piano_audio, note_audio))
-                
-#                 # for note_str in new_melody.strip().split():
-#                 #     try:
-#                 #         note, duration = note_str.split('-')
-#                 #         duration = float(duration) * BEAT_DURATION
-                        
-#                 #         if note in note_to_midi:
-#                 #             freq = 440 * 2 ** ((note_to_midi[note] - 69) / 12)
-#                 #             note_audio = piano_sound(freq, duration)
-#                 #             piano_audio = np.concatenate((piano_audio, note_audio))
-#                 #         else:
-#                 #             st.warning(f"Skipping unknown note: {note}")
-                            
-#                 #     except (ValueError, KeyError) as e:
-#                 #         st.warning(f"Error processing note {note_str}: {str(e)}")
-#                 #         continue
-                
-#                 # piano_audio = (piano_audio * 32767).astype(np.int16)
-#                 # scipy.io.wavfile.write("generated_melody.wav", SAMPLE_RATE, piano_audio)
-                
-#                                 # Generate piano sequence
-#                 piano_audio = render_piano_sequence(new_melody, SAMPLE_RATE)
-#                 scipy.io.wavfile.write("generated_melody.wav", SAMPLE_RATE, piano_audio)
-                
-#                 st.markdown("### 🎵 Generated Melody")
-#                 st.audio("generated_melody.wav")
-                
-#                 status_text.text("🎵 Creating music description...")
-#                 progress_bar.progress(75)
-#                 music_prompt = generate_music_prompt(story)
-                
-#                 st.markdown("### 🎼 Music Description")
-#                 st.write(music_prompt)
-                
-#                 # Final Music Generation
-#                 status_text.text("🎼 Creating final composition...")
-#                 progress_bar.progress(90)
-                
-#                 processor = AutoProcessor.from_pretrained("facebook/musicgen-small")
-#                 model = MusicgenForConditionalGeneration.from_pretrained("facebook/musicgen-small")
-                
-#                 if torch.cuda.is_available():
-#                     model = model.to("cuda")
-                
-#                 inputs = processor(
-#                     text=[music_prompt],
-#                     padding=True,
-#                     return_tensors="pt"
-#                 )
-                
-#                 if torch.cuda.is_available():
-#                     inputs = {k: v.to("cuda") for k, v in inputs.items()}
-                
-#                 with torch.no_grad():
-#                     output = model.generate(**inputs, max_new_tokens=256, do_sample=True)
-                
-#                 audio_data = output[0].cpu().numpy().squeeze()
-#                 audio_data = np.clip(audio_data / np.max(np.abs(audio_data)), -1.0, 1.0)
-#                 audio_data = (audio_data * 32767).astype(np.int16)
-                
-#                 scipy.io.wavfile.write("final_music.wav", 32000, audio_data)
-                
-#                 st.markdown("### 🎵 Final Composition")
-#                 st.audio("final_music.wav")
-                
-#                 progress_bar.progress(100)
-#                 status_text.text("✨ Generation complete!")
-#                 st.session_state.generation_complete = True
-                
-#             except Exception as e:
-#                 st.error(f"An error occurred during melody generation: {str(e)}")
-#                 status_text.text("❌ Generation failed")
-#                 progress_bar.empty()
-                
 def main():
     # Header
-    st.title("🎵 AI Story & Music Generator 🎨")
-    st.markdown("### Transform your ideas into stories and melodies")
+    st.title("Emotion Driven Story Telling with Genrated Music")
+
     
     bm25, stories = setup_retrieval()
     
